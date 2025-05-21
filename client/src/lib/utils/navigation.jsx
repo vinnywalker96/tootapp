@@ -1,15 +1,16 @@
-import { RxDashboard } from "react-icons/rx";
-import { CgProfile } from "react-icons/cg";
+import { HiOutlineHome } from "react-icons/hi";
+import { BsPersonCircle } from "react-icons/bs";
 import { MdOutlineWorkHistory } from "react-icons/md";
 import { LuLogOut } from "react-icons/lu";
-import { FaRegCalendarAlt } from "react-icons/fa";
+import { FaRegCalendarAlt, FaUsers, FaCar, FaMoneyBillWave, FaRoute, FaChartBar } from "react-icons/fa";
+import { IoAnalyticsSharp } from "react-icons/io5";
 
 export const DASHBOARD_SIDEBAR_LINKS = [
 		{
 			key: 'dashboard',
 			label: 'Dashboard',
 			path: '',
-			icon: <RxDashboard />
+			icon: <HiOutlineHome />
 		},
 
 		{
@@ -22,8 +23,8 @@ export const DASHBOARD_SIDEBAR_LINKS = [
 			key: 'Profile',
 			label: 'Profile',
 			path: 'profile',
-			icon: <CgProfile />
-		},
+			icon: <BsPersonCircle />
+		}
 ]
 
 export const DASHBOARD_BOTTOM_LINKS = [
@@ -43,7 +44,13 @@ export const DASHBOARD_DRIVER_LINKS = [
 			key: 'dashboard',
 			label: 'Dashboard',
 			path: '',
-			icon: <RxDashboard />
+			icon: <HiOutlineHome />
+		},
+		{
+			key: 'Active Trips',
+			label: 'Active Trips',
+			path: 'active-trips',
+			icon: <FaRoute />
 		},
 		{
 			key: 'Trip History',
@@ -61,8 +68,8 @@ export const DASHBOARD_DRIVER_LINKS = [
 			key: 'Profile',
 			label: 'Profile',
 			path: 'profile',
-			icon: <CgProfile />
-		},
+			icon: <BsPersonCircle />
+		}
 ]
 
 export const DASHBOARD_DRIVER_BOTTOM_LINKS = [
@@ -80,32 +87,43 @@ export const ADMIN_DASHBOARD_LINKS = [
 		key: 'dashboard',
 		label: 'Dashboard',
 		path: '',
-		icon: <RxDashboard />
+		icon: <HiOutlineHome />
 	},
-
+	{
+		key: 'Trips',
+		label: 'Trips',
+		path: 'trips',
+		icon: <FaRoute />
+	},
 	{
 		key: 'Drivers',
 		label: 'Drivers',
 		path: 'drivers',
-		icon: <MdOutlineWorkHistory />
+		icon: <FaCar />
 	},
 	{
 		key: 'Users',
 		label: 'Users',
 		path: 'users',
-		icon: <MdOutlineWorkHistory />
+		icon: <FaUsers />
 	},
 	{
 		key: 'Payments',
 		label: 'Payments',
 		path: 'payments',
-		icon: <MdOutlineWorkHistory />
+		icon: <FaMoneyBillWave />
+	},
+	{
+		key: 'Analytics',
+		label: 'Analytics',
+		path: 'analytics',
+		icon: <IoAnalyticsSharp />
 	},
 	{
 		key: 'Profile',
 		label: 'Profile',
 		path: 'profile',
-		icon: <CgProfile />
+		icon: <BsPersonCircle />
 	},
 
 ]

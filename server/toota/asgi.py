@@ -1,20 +1,26 @@
 import os
 
 from django.core.asgi import get_asgi_application
-from django.urls import path
-
 from channels.routing import ProtocolTypeRouter, URLRouter
+from channels.security.websocket import AllowedHostsOriginValidator
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'toota.settings')
 
+# Import after setting DJANGO_SETTINGS_MODULE
 from toota.middleware import TokenAuthMiddlewareStack
-from trips.consumers import TootaConsumer
+from trips.routing import websocket_urlpatterns
+
+# Initialize Django ASGI application early to ensure the AppRegistry
+# is populated before importing code that may import ORM models.
+django_asgi_app = get_asgi_application()
 
 application = ProtocolTypeRouter({
-    'http': get_asgi_application(),
-    'websocket': TokenAuthMiddlewareStack(
-        URLRouter([
-            path('toota/', TootaConsumer.as_asgi()),
-        ])
+    'http': django_asgi_app,
+    'websocket': AllowedHostsOriginValidator(
+        TokenAuthMiddlewareStack(
+            URLRouter(
+                websocket_urlpatterns
+            )
+        )
     ),
 })

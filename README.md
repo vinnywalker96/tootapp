@@ -1,24 +1,42 @@
-# TootApp - Digital Platform
+# TootApp - Transportation Platform
 
-TootApp is a digital platform for managing trips, drivers, and users.
+TootApp is a comprehensive transportation platform that connects users with drivers for efficient and reliable transportation services.
 
 ## Features
 
-- User, Driver, and Admin dashboards
+- User and driver authentication
 - Trip management
+- Real-time bidding system
+- Live chat between users and drivers
+- SMS notifications
 - Payment processing
-- SMS notifications for new trips
-- Email notifications
-- Real-time updates
+- Driver ratings and reviews
+- WebSocket support for real-time updates
+
+## Tech Stack
+
+### Backend
+- Django 4.2
+- Django REST Framework
+- Django Channels (WebSockets)
+- PostgreSQL
+- Redis (for WebSocket channel layers)
+- Africa's Talking API (for SMS)
+
+### Frontend
+- React
+- Tailwind CSS
+- React Router
+- React Icons
+- WebSocket API
 
 ## Setup Instructions
 
 ### Prerequisites
-
 - Python 3.8+
-- Node.js 14+
-- Redis (for WebSockets)
-- PostgreSQL (for production)
+- Node.js 16+
+- PostgreSQL
+- Redis
 
 ### Backend Setup
 
@@ -30,30 +48,38 @@ TootApp is a digital platform for managing trips, drivers, and users.
 2. Create a virtual environment:
    ```
    python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
    ```
 
-3. Install dependencies:
+3. Activate the virtual environment:
+   - Windows: `venv\Scripts\activate`
+   - macOS/Linux: `source venv/bin/activate`
+
+4. Install dependencies:
    ```
    pip install -r requirements.txt
    ```
 
-4. Create a `.env` file based on `.env.example`:
+5. Create a `.env` file in the server directory with the following variables:
    ```
-   cp .env.example .env
+   DEBUG=True
+   SECRET_KEY=your_secret_key
+   DATABASE_URL=postgres://user:password@localhost:5432/tootapp
+   REDIS_URL=redis://localhost:6379/0
+   AT_USERNAME=your_africastalking_username
+   AT_API_KEY=your_africastalking_api_key
    ```
-
-5. Update the `.env` file with your configuration:
-   - Database settings
-   - Email settings
-   - SMS API settings (Africa's Talking API)
 
 6. Run migrations:
    ```
    python manage.py migrate
    ```
 
-7. Start the development server:
+7. Create a superuser:
+   ```
+   python manage.py createsuperuser
+   ```
+
+8. Start the development server:
    ```
    python manage.py runserver
    ```
@@ -70,41 +96,55 @@ TootApp is a digital platform for managing trips, drivers, and users.
    npm install
    ```
 
-3. Start the development server:
+3. Create a `.env` file in the client directory with the following variables:
+   ```
+   VITE_API_URL=http://localhost:8000/api
+   VITE_WS_URL=ws://localhost:8000/ws
+   ```
+
+4. Start the development server:
    ```
    npm run dev
    ```
 
-## SMS Notification Setup
+## WebSocket Testing
 
-The application now includes SMS notifications for new trips. To enable this feature:
+You can test the WebSocket functionality using the provided test script:
 
-1. Sign up for an Africa's Talking account at [africastalking.com](https://africastalking.com/)
-2. Get your API key and username from the dashboard
-3. Add the following to your `.env` file:
-   ```
-   SMS_API_KEY=your_api_key
-   SMS_USERNAME=your_username
-   SMS_SENDER_ID=TootApp  # Optional
-   ```
+```
+cd server
+python websocket_test.py
+```
 
-## Performance Improvements
+## API Documentation
 
-The application has been optimized for better performance:
+API documentation is available at:
+- Swagger UI: `http://localhost:8000/swagger/`
+- ReDoc: `http://localhost:8000/redoc/`
 
-- Database queries optimized with `select_related` for foreign keys
-- Efficient counting of trips by status
-- Improved error handling
-- Better logging configuration
-- Optimized monthly trip statistics
+## SMS Notifications
 
-## Contributing
+The platform uses Africa's Talking API for SMS notifications. To enable this feature:
 
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature-name`
-3. Commit your changes: `git commit -m 'Add some feature'`
-4. Push to the branch: `git push origin feature-name`
-5. Submit a pull request
+1. Sign up for an account at [Africa's Talking](https://africastalking.com/)
+2. Get your API key and username
+3. Add them to your `.env` file as shown above
+
+## Deployment
+
+### Backend Deployment
+
+1. Set up a production-ready database (PostgreSQL)
+2. Set up Redis for WebSocket channel layers
+3. Configure environment variables for production
+4. Collect static files: `python manage.py collectstatic`
+5. Use Gunicorn and Daphne for serving the application
+6. Set up NGINX as a reverse proxy
+
+### Frontend Deployment
+
+1. Build the frontend: `npm run build`
+2. Serve the built files using NGINX or a similar web server
 
 ## License
 

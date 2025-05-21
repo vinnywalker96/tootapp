@@ -1,10 +1,6 @@
-# views.py
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
-from .models import Trip, Payment
-from authentication.models import Driver
-from .serializers import TripSerializer, PaymentSerializer
-from rest_framework import permissions
+from rest_framework.views import APIView
 from django.core.mail import EmailMessage
 from django.template.loader import render_to_string
 from reportlab.pdfgen import canvas
@@ -15,7 +11,10 @@ from django.db.models import Count, Q
 from django.utils import timezone
 from django.db import connection
 from django.conf import settings
-from .services import NotificationService
+
+from ..models import Trip
+from ..serializers import TripSerializer
+from ..services import NotificationService
 
 logger = logging.getLogger(__name__)
 
@@ -53,6 +52,7 @@ class TripListCreateView(generics.ListCreateAPIView):
         """
         try:
             # Get all active drivers
+            from authentication.models import Driver
             drivers = Driver.objects.filter(is_active=True, is_verified=True)
             
             if not drivers:
@@ -247,30 +247,6 @@ class TripCompletedCountView(generics.GenericAPIView):
 
         return Response(completed_trips_data, status=status.HTTP_200_OK)
 
-
-class PaymentListCreateAPIView(generics.ListCreateAPIView):
-    serializer_class = PaymentSerializer
-    permission_classes = [permissions.IsAuthenticated]
-    
-    def get_queryset(self):
-        """
-        Optimize queryset by using select_related for foreign keys
-        """
-        return Payment.objects.select_related('trip', 'driver').all()
-
-    def perform_create(self, serializer):
-        serializer.save()  # This saves the validated data to create a new Payment instance
-
-class PaymentRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
-    serializer_class = PaymentSerializer
-    permission_classes = [permissions.IsAuthenticated]
-    
-    def get_queryset(self):
-        """
-        Optimize queryset by using select_related for foreign keys
-        """
-        return Payment.objects.select_related('trip', 'driver').all()
-
 class TripStatusView(generics.GenericAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
@@ -302,3 +278,4 @@ class TripStatusView(generics.GenericAPIView):
             return Response(trip_data, status=status.HTTP_200_OK)
         except Trip.DoesNotExist:
             return Response({"detail": "Trip not found."}, status=status.HTTP_404_NOT_FOUND)
+
