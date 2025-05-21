@@ -1,146 +1,232 @@
-"""
-Notification Service for sending notifications to users through various channels
-"""
 import logging
-from django.core.mail import EmailMessage
+import africastalking
+import os
+from django.conf import settings
+from django.core.mail import send_mail
 from django.template.loader import render_to_string
-from .sms_service import SMSService
+from django.utils.html import strip_tags
 
 logger = logging.getLogger(__name__)
 
 class NotificationService:
     """
-    Service for sending notifications to users through various channels
-    such as email and SMS.
+    Service for sending notifications via SMS and email
     """
     
     @staticmethod
-    def send_trip_notifications(trip, users_to_notify=None):
+    def send_trip_notifications(trip):
         """
-        Send notifications about a new trip to relevant users
+        Send notifications when a new trip is created
         
         Args:
-            trip: The Trip instance
-            users_to_notify: List of User instances to notify (if None, notify trip creator and assigned driver)
+            trip: The Trip object
             
         Returns:
             dict: Results of notification attempts
         """
         results = {
-            'email': False,
-            'sms': False
+            'sms': False,
+            'email': False
         }
         
         try:
-            # If no specific users provided, notify trip creator and driver (if assigned)
-            if users_to_notify is None:
-                users_to_notify = []
-                
-                # Add trip creator
-                if trip.user:
-                    users_to_notify.append(trip.user)
-                
-                # Add driver if assigned
-                if trip.driver:
-                    users_to_notify.append(trip.driver)
+            # Send SMS to all drivers
+            from authentication.models import Driver
+            drivers = Driver.objects.filter(is_active=True)
             
-            # Prepare trip details for notifications
-            trip_details = {
-                'id': str(trip.id),
-                'pickup_location': trip.pickup_location.location,
-                'dropoff_location': trip.dropoff_location.location,
-                'pickup_time': trip.pickup_time,
-                'vehicle_type': trip.vehicle_type,
-                'load_description': trip.load_description,
-                'status': trip.status
-            }
-            
-            # Send notifications to each user
-            for user in users_to_notify:
-                # Send email notification
-                email_sent = NotificationService.send_trip_email(
-                    user.email, 
-                    user.full_name,
-                    trip_details
-                )
+            if drivers.exists():
+                sms_result = NotificationService.send_sms_to_drivers(trip, drivers)
+                results['sms'] = sms_result
                 
-                # Send SMS notification
-                sms_sent = NotificationService.send_trip_sms(
-                    user.phone_number,
-                    trip_details
-                )
+            # Send email notification to trip creator
+            if trip.user and trip.user.email:
+                email_result = NotificationService.send_trip_email(trip)
+                results['email'] = email_result
                 
-                # Update results
-                if email_sent:
-                    results['email'] = True
-                
-                if sms_sent:
-                    results['sms'] = True
-                    
-            return results
-            
         except Exception as e:
             logger.error(f"Error sending trip notifications: {str(e)}")
-            return results
+            
+        return results
     
     @staticmethod
-    def send_trip_email(email, name, trip_details):
+    def send_sms_to_drivers(trip, drivers):
         """
-        Send an email notification about a new trip
+        Send SMS notifications to drivers about a new trip
         
         Args:
-            email (str): The recipient's email address
-            name (str): The recipient's name
-            trip_details (dict): Details about the trip
+            trip: The Trip object
+            drivers: QuerySet of Driver objects
             
         Returns:
-            bool: True if the email was sent successfully, False otherwise
+            bool: True if successful, False otherwise
         """
         try:
-            subject = "New Trip Created on TootApp"
+            # Initialize Africa's Talking
+            username = settings.SMS_USERNAME
+            api_key = settings.SMS_API_KEY
             
-            # Prepare email context
-            context = {
-                'name': name,
-                'trip_id': trip_details.get('id'),
-                'pickup_location': trip_details.get('pickup_location'),
-                'dropoff_location': trip_details.get('dropoff_location'),
-                'pickup_time': trip_details.get('pickup_time'),
-                'vehicle_type': trip_details.get('vehicle_type'),
-                'load_description': trip_details.get('load_description')
-            }
+            if not username or not api_key:
+                logger.warning("SMS credentials not configured")
+                return False
+                
+            africastalking.initialize(username, api_key)
+            sms = africastalking.SMS
             
-            # Render email body from template
-            # Note: You'll need to create this template
-            email_body = render_to_string('emails/trip_notification.html', context)
-            
-            # Create and send email
-            email_message = EmailMessage(
-                subject=subject,
-                body=email_body,
-                to=[email]
+            # Prepare the message
+            message = (
+                f"New trip request: {trip.pickup_location.location} to "
+                f"{trip.dropoff_location.location}. Vehicle: {trip.vehicle_type}. "
+                f"Login to the app to bid."
             )
-            email_message.content_subtype = 'html'
-            email_message.send(fail_silently=False)
             
-            logger.info(f"Trip notification email sent to {email}")
+            # Get phone numbers
+            recipients = [driver.phone_number for driver in drivers if driver.phone_number]
+            
+            if not recipients:
+                logger.warning("No driver phone numbers available for SMS")
+                return False
+                
+            # Send the message
+            response = sms.send(message, recipients, settings.SMS_SENDER_ID)
+            
+            logger.info(f"SMS notification sent to {len(recipients)} drivers: {response}")
             return True
             
         except Exception as e:
-            logger.error(f"Error sending trip notification email: {str(e)}")
+            logger.error(f"Error sending SMS notifications: {str(e)}")
             return False
     
     @staticmethod
-    def send_trip_sms(phone_number, trip_details):
+    def send_trip_email(trip):
         """
-        Send an SMS notification about a new trip
+        Send email notification to user about their trip
         
         Args:
-            phone_number (str): The recipient's phone number
-            trip_details (dict): Details about the trip
+            trip: The Trip object
             
         Returns:
-            bool: True if the SMS was sent successfully, False otherwise
+            bool: True if successful, False otherwise
         """
-        return SMSService.send_trip_notification(phone_number, trip_details)
+        try:
+            subject = f"Your Trip Request #{trip.id} has been created"
+            
+            # Prepare context for email template
+            context = {
+                'user_name': trip.user.full_name,
+                'trip_id': trip.id,
+                'pickup': trip.pickup_location.location,
+                'dropoff': trip.dropoff_location.location,
+                'vehicle_type': trip.get_vehicle_type_display(),
+                'pickup_time': trip.pickup_time,
+                'load_description': trip.load_description
+            }
+            
+            # Render email templates
+            html_message = render_to_string('email/trip_created.html', context)
+            plain_message = strip_tags(html_message)
+            
+            # Send email
+            send_mail(
+                subject=subject,
+                message=plain_message,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[trip.user.email],
+                html_message=html_message,
+                fail_silently=False
+            )
+            
+            logger.info(f"Email notification sent to {trip.user.email}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error sending email notification: {str(e)}")
+            return False
+            
+    @staticmethod
+    def send_bid_notification(bid):
+        """
+        Send notification when a new bid is placed
+        
+        Args:
+            bid: The Bid object
+            
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        try:
+            # Send email to trip creator
+            if bid.trip.user and bid.trip.user.email:
+                subject = f"New bid received for your Trip #{bid.trip.id}"
+                
+                context = {
+                    'user_name': bid.trip.user.full_name,
+                    'trip_id': bid.trip.id,
+                    'driver_name': bid.driver.full_name,
+                    'bid_amount': bid.amount,
+                    'pickup': bid.trip.pickup_location.location,
+                    'dropoff': bid.trip.dropoff_location.location
+                }
+                
+                html_message = render_to_string('email/new_bid.html', context)
+                plain_message = strip_tags(html_message)
+                
+                send_mail(
+                    subject=subject,
+                    message=plain_message,
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=[bid.trip.user.email],
+                    html_message=html_message,
+                    fail_silently=False
+                )
+                
+                logger.info(f"Bid notification email sent to {bid.trip.user.email}")
+                return True
+                
+        except Exception as e:
+            logger.error(f"Error sending bid notification: {str(e)}")
+            
+        return False
+        
+    @staticmethod
+    def send_bid_accepted_notification(bid):
+        """
+        Send notification when a bid is accepted
+        
+        Args:
+            bid: The accepted Bid object
+            
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        try:
+            # Send SMS to driver
+            if bid.driver.phone_number:
+                # Initialize Africa's Talking
+                username = settings.SMS_USERNAME
+                api_key = settings.SMS_API_KEY
+                
+                if not username or not api_key:
+                    logger.warning("SMS credentials not configured")
+                    return False
+                    
+                africastalking.initialize(username, api_key)
+                sms = africastalking.SMS
+                
+                # Prepare the message
+                message = (
+                    f"Your bid of R{bid.amount} for trip from {bid.trip.pickup_location.location} to "
+                    f"{bid.trip.dropoff_location.location} has been accepted. "
+                    f"Login to the app for details."
+                )
+                
+                # Send the message
+                response = sms.send(message, [bid.driver.phone_number], settings.SMS_SENDER_ID)
+                
+                logger.info(f"Bid accepted SMS sent to driver: {response}")
+                return True
+                
+        except Exception as e:
+            logger.error(f"Error sending bid accepted notification: {str(e)}")
+            
+        return False
 

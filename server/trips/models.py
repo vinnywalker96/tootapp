@@ -71,12 +71,34 @@ class Trip(models.Model):
     bid = models.DecimalField(max_digits=10, decimal_places=2, null=False, blank=False, default=0.00)
     number_of_floors = models.IntegerField(default=0, null=False)
     is_accepted = models.BooleanField(default=False)
+    
+    # New fields for bidding functionality
+    min_bid = models.DecimalField(max_digits=10, decimal_places=2, null=False, blank=False, default=0.00)
+    max_bid = models.DecimalField(max_digits=10, decimal_places=2, null=False, blank=False, default=0.00)
+    allow_bidding = models.BooleanField(default=True)
+    bidding_end_time = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         return f'{self.id}'
     
     def get_absolute_url(self):
         return reverse('trip:trip_detail', kwargs={'trip_id': self.id})
+    
+class Bid(models.Model):
+    """Model to store driver bids for trips"""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
+    trip = models.ForeignKey(Trip, on_delete=models.CASCADE, related_name='bids')
+    driver = models.ForeignKey(Driver, on_delete=models.CASCADE, related_name='bids')
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    created = models.DateTimeField(auto_now_add=True)
+    updated = models.DateTimeField(auto_now=True)
+    is_accepted = models.BooleanField(default=False)
+    
+    class Meta:
+        ordering = ['amount']
+        
+    def __str__(self):
+        return f"Bid of {self.amount} by {self.driver.full_name} for Trip {self.trip.id}"
     
 class Payment(models.Model):
     PAID = 'PAID'
@@ -88,7 +110,6 @@ class Payment(models.Model):
         (PENDING, 'PENDING')
     )
    
-
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
     trip = models.ForeignKey(Trip, on_delete=models.CASCADE, related_name='payments')
     driver = models.ForeignKey(Driver, on_delete=models.CASCADE, related_name='payments')
@@ -112,3 +133,20 @@ class Payment(models.Model):
 
     def __str__(self):
         return f"Payment {self.order_number} for Trip {self.trip.id}"
+        
+class ChatMessage(models.Model):
+    """Model to store chat messages between users and drivers"""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
+    trip = models.ForeignKey(Trip, on_delete=models.CASCADE, related_name='messages')
+    sender_type = models.CharField(max_length=10, choices=[('USER', 'User'), ('DRIVER', 'Driver')])
+    sender_id = models.CharField(max_length=50)  # UUID of the user or driver
+    message = models.TextField()
+    created = models.DateTimeField(auto_now_add=True)
+    is_read = models.BooleanField(default=False)
+    
+    class Meta:
+        ordering = ['created']
+        
+    def __str__(self):
+        return f"Message from {self.sender_type} on {self.created.strftime('%Y-%m-%d %H:%M')}"
+

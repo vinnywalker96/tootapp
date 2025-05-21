@@ -14,7 +14,8 @@ application = ProtocolTypeRouter({
     'http': get_asgi_application(),
     'websocket': TokenAuthMiddlewareStack(
         URLRouter([
-            path('toota/', TootaConsumer.as_asgi()),
+            path('ws/toota/', TootaConsumer.as_asgi()),
         ])
     ),
 })
+
