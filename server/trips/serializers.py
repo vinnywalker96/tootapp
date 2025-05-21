@@ -2,6 +2,7 @@ from rest_framework import serializers
 from django.utils import timezone
 from .models import Trip, Payment, PickupLocation, DropoffLocation
 from authentication.serializers import UserSerializer, DriverSerializer
+from authentication.utils.notification_service import NotificationService
 import logging
 import re
 
@@ -71,6 +72,17 @@ class TripSerializer(serializers.ModelSerializer, PhoneNumberValidatorMixin):
                 **validated_data
             )
 
+            # Send notifications to relevant users
+            try:
+                notification_results = NotificationService.send_trip_notifications(trip)
+                if notification_results['sms']:
+                    logger.info(f"SMS notification sent for trip {trip.id}")
+                if notification_results['email']:
+                    logger.info(f"Email notification sent for trip {trip.id}")
+            except Exception as notification_error:
+                # Log the error but don't fail the trip creation
+                logger.error(f"Failed to send notifications for trip {trip.id}: {str(notification_error)}")
+
             logger.info(f"Trip created successfully with ID: {trip.id}")
             return trip
         except Exception as e:
@@ -115,6 +127,7 @@ class TripSerializer(serializers.ModelSerializer, PhoneNumberValidatorMixin):
         except Exception as e:
             logger.error(f"Error while updating trip: {str(e)}")
             raise serializers.ValidationError({"detail": "Error occurred during trip update."})
+
 class PaymentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Payment
