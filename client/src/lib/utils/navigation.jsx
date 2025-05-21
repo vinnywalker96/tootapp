@@ -1,15 +1,15 @@
-import { RxDashboard } from "react-icons/rx";
-import { CgProfile } from "react-icons/cg";
+import { HiOutlineHome } from "react-icons/hi";
+import { BsPersonCircle } from "react-icons/bs";
 import { MdOutlineWorkHistory } from "react-icons/md";
 import { LuLogOut } from "react-icons/lu";
-import { FaRegCalendarAlt, FaUsers, FaCar, FaMoneyBillWave, FaRoute, IoAnalyticsSharp } from "react-icons/fa";
+import { FaRegCalendarAlt, FaUsers, FaCar, FaMoneyBillWave, FaRoute, FaChartBar } from "react-icons/fa";
 
 export const DASHBOARD_SIDEBAR_LINKS = [
 		{
 			key: 'dashboard',
 			label: 'Dashboard',
 			path: '',
-			icon: <RxDashboard />
+			icon: <HiOutlineHome />
 		},
 
 		{
@@ -22,7 +22,7 @@ export const DASHBOARD_SIDEBAR_LINKS = [
 			key: 'Profile',
 			label: 'Profile',
 			path: 'profile',
-			icon: <CgProfile />
+			icon: <BsPersonCircle />
 		},
 ]
 
@@ -43,7 +43,7 @@ export const DASHBOARD_DRIVER_LINKS = [
 			key: 'dashboard',
 			label: 'Dashboard',
 			path: '',
-			icon: <RxDashboard />
+			icon: <HiOutlineHome />
 		},
 		{
 			key: 'Trip History',
@@ -61,7 +61,7 @@ export const DASHBOARD_DRIVER_LINKS = [
 			key: 'Profile',
 			label: 'Profile',
 			path: 'profile',
-			icon: <CgProfile />
+			icon: <BsPersonCircle />
 		},
 ]
 
@@ -80,7 +80,7 @@ export const ADMIN_DASHBOARD_LINKS = [
 		key: 'dashboard',
 		label: 'Dashboard',
 		path: '',
-		icon: <RxDashboard />
+		icon: <HiOutlineHome />
 	},
 	{
 		key: 'Trips',
@@ -110,13 +110,13 @@ export const ADMIN_DASHBOARD_LINKS = [
 		key: 'Analytics',
 		label: 'Analytics',
 		path: 'analytics',
-		icon: <IoAnalyticsSharp />
+		icon: <FaChartBar />
 	},
 	{
 		key: 'Profile',
 		label: 'Profile',
 		path: 'profile',
-		icon: <CgProfile />
+		icon: <BsPersonCircle />
 	},
 
 ]

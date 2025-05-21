@@ -48,24 +48,11 @@ class ChatMessageSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = ChatMessage
-        fields = ['id', 'trip', 'sender_type', 'sender_id', 'message', 'created', 'is_read', 'sender_name']
-        read_only_fields = ['id', 'created', 'sender_name']
+        fields = ['id', 'trip', 'sender', 'content', 'timestamp', 'is_read', 'sender_name']
+        read_only_fields = ['id', 'timestamp', 'sender_name']
     
     def get_sender_name(self, obj):
-        from authentication.models import User, Driver
-        
-        if obj.sender_type == 'USER':
-            try:
-                user = User.objects.get(id=obj.sender_id)
-                return user.full_name
-            except User.DoesNotExist:
-                return "Unknown User"
-        else:
-            try:
-                driver = Driver.objects.get(id=obj.sender_id)
-                return driver.full_name
-            except Driver.DoesNotExist:
-                return "Unknown Driver"
+        return obj.sender.full_name if hasattr(obj.sender, 'full_name') else obj.sender.username
 
 class TripSerializer(serializers.ModelSerializer):
     pickup_location = PickupLocationSerializer()
@@ -178,4 +165,3 @@ class PaymentSerializer(serializers.ModelSerializer):
         model = Payment
         fields = '__all__'
         read_only_fields = ['id', 'payment_date', 'order_number', 'compensation_amount', 'net_amount']
-

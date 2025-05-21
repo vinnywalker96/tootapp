@@ -136,17 +136,14 @@ class Payment(models.Model):
         
 class ChatMessage(models.Model):
     """Model to store chat messages between users and drivers"""
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
     trip = models.ForeignKey(Trip, on_delete=models.CASCADE, related_name='messages')
-    sender_type = models.CharField(max_length=10, choices=[('USER', 'User'), ('DRIVER', 'Driver')])
-    sender_id = models.CharField(max_length=50)  # UUID of the user or driver
-    message = models.TextField()
-    created = models.DateTimeField(auto_now_add=True)
+    sender = models.ForeignKey(User, on_delete=models.CASCADE)
+    content = models.TextField()
+    timestamp = models.DateTimeField(default=timezone.now)
     is_read = models.BooleanField(default=False)
     
     class Meta:
-        ordering = ['created']
+        ordering = ['timestamp']
         
     def __str__(self):
-        return f"Message from {self.sender_type} on {self.created.strftime('%Y-%m-%d %H:%M')}"
-
+        return f"Message from {self.sender.username} on {self.timestamp.strftime('%Y-%m-%d %H:%M')}"
