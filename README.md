@@ -1,159 +1,112 @@
-## Table of Contents
-- [Introduction](#introduction)
-- [Features](#features)
-- [Installation](#installation)
-- [Usage](#usage)
-- [APIUSAGE](#apiusage)
-- [DockerSetup](#dockersetup)
-- [Contributing](#contributing)
-- [Code of Conduct](#codeofconduct)
-- [License](#license)
+# TootApp - Digital Platform
 
-## Introduction
-Welcome to Toota, your ultimate solution for seamless transportation and logistics services.
-
-With Toota, you can effortlessly connect with a diverse fleet of vehicles and experienced drivers to meet all your transportation needs. Whether you're moving goods, Toota ensures a reliable, efficient, and hassle-free experience every time.
-
-Join Toota today and experience the future of transportation!
+TootApp is a digital platform for managing trips, drivers, and users.
 
 ## Features
-- **Diverse Fleet Options**: Choose from a variety of trucks including:
-  - 1 ton Truck
-  - 1.5 ton Truck
-  - 2 ton Truck
-  - 4 ton Truck
-  - Bakkie
-  - 8 ton Truck
-- **Experienced Drivers**: Connect with professional and experienced drivers for reliable transportation.
-- **User-Friendly Interface**: Enjoy a clean and intuitive user interface for a seamless booking experience.
-- **Responsive Design**: Access the platform from both desktop and mobile devices.
-- **Efficient Logistics**: Ensure reliable and efficient transportation services for all your needs.
-- **Hassle-Free Experience**: Benefit from a streamlined process that makes booking and managing rentals easy and stress-free.
 
-## Installation
-To get started with Toota, follow these steps:
+- User, Driver, and Admin dashboards
+- Trip management
+- Payment processing
+- SMS notifications for new trips
+- Email notifications
+- Real-time updates
 
-### Backend (Django)
-1. Clone the repository:
-    ```bash
-    git clone https://github.com/MfundoDon/toota.git
-    ```
-2. Navigate to the backend directory:
-    ```bash
-    cd server 
-    ```
-3. Create a virtual environment and activate it:
-    ```bash
-    python -m venv venv
-    source venv/bin/activate
-    ```
-4. Install the required dependencies:
-    ```bash
-    pip install -r requirements.txt
-    ```
-5. Apply migrations and start the server:
-    ```bash
-    python manage.py migrate
-    python manage.py runserver
-    ```
-6. Access the Swagger API documentation:
-    - Open your browser and go to `http://127.0.0.1:8000/swagger/` to view the API documentation.
+## Setup Instructions
 
-### Frontend (React + vite )
-1. Navigate to the frontend directory:
-    ```bash
-    cd client
-    ```
-2. Install the required dependencies:
-    ```bash
-    npm install
-    ```
+### Prerequisites
+
+- Python 3.8+
+- Node.js 14+
+- Redis (for WebSockets)
+- PostgreSQL (for production)
+
+### Backend Setup
+
+1. Navigate to the server directory:
+   ```
+   cd server
+   ```
+
+2. Create a virtual environment:
+   ```
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   ```
+
+3. Install dependencies:
+   ```
+   pip install -r requirements.txt
+   ```
+
+4. Create a `.env` file based on `.env.example`:
+   ```
+   cp .env.example .env
+   ```
+
+5. Update the `.env` file with your configuration:
+   - Database settings
+   - Email settings
+   - SMS API settings (Africa's Talking API)
+
+6. Run migrations:
+   ```
+   python manage.py migrate
+   ```
+
+7. Start the development server:
+   ```
+   python manage.py runserver
+   ```
+
+### Frontend Setup
+
+1. Navigate to the client directory:
+   ```
+   cd client
+   ```
+
+2. Install dependencies:
+   ```
+   npm install
+   ```
+
 3. Start the development server:
-    ```bash
-    npm start
-    ```
+   ```
+   npm run dev
+   ```
 
-You can now access the application on your local machine at `http://localhost:5176`.
-## Usage
-To use Toota, follow these steps:
+## SMS Notification Setup
 
-1. **Navigate to the website**:
-   - Go to [Toota App](https://www.tootapp.co.za/) to see the application in action.
+The application now includes SMS notifications for new trips. To enable this feature:
 
-2. **Book a Vehicle**:
-   - Select the type of truck you need.
-   - Provide the necessary details for your trip.
-   - Confirm your booking.
+1. Sign up for an Africa's Talking account at [africastalking.com](https://africastalking.com/)
+2. Get your API key and username from the dashboard
+3. Add the following to your `.env` file:
+   ```
+   SMS_API_KEY=your_api_key
+   SMS_USERNAME=your_username
+   SMS_SENDER_ID=TootApp  # Optional
+   ```
 
-3. **Manage Bookings**:
-   - Track your booking status.
-   - Communicate with the driver if needed.
-### API Usage
-- Access the Swagger API documentation locally:
-  - Open your browser and go to `http://127.0.0.1:8000/swagger/`.
-  - 
-### Docker Setup
-To run the project using Docker, follow these steps:
+## Performance Improvements
 
-1. Ensure Docker is installed on your machine.
-2. Clone the repository:
-    ```bash
-    git clone https://github.com/MfundoDon/toota.git
-    ```
-3. Navigate to the project directory:
-    ```bash
-    cd toota
-    ```
-4. Build and run the Docker containers:
-    ```bash
-    docker-compose up --build
-    ```
+The application has been optimized for better performance:
 
-This will set up the backend and frontend services in Docker containers.
-
-- The backend will be accessible at `http://localhost:8000`.
-- The frontend will be accessible at `http://localhost:3000`.
-
-The Swagger API documentation will be available at `http://localhost:8000/swagger/`.
+- Database queries optimized with `select_related` for foreign keys
+- Efficient counting of trips by status
+- Improved error handling
+- Better logging configuration
+- Optimized monthly trip statistics
 
 ## Contributing
-We welcome contributions to Toota! If you would like to contribute, please follow these guidelines:
 
-1. **Fork the Repository**: 
-   - Click on the "Fork" button at the top of this repository to create a copy of the repository under your GitHub account.
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature-name`
+3. Commit your changes: `git commit -m 'Add some feature'`
+4. Push to the branch: `git push origin feature-name`
+5. Submit a pull request
 
-2. **Clone the Forked Repository**:
-   - Clone your forked repository to your local machine:
-     ```bash
-     git clone https://github.com/MfundoDon/toota.git
-     ```
+## License
 
-3. **Create a New Branch**:
-   - Create a new branch for your feature or bug fix:
-     ```bash
-     git checkout -b feature-or-bugfix-name
-     ```
-
-4. **Make Changes**:
-   - Make your changes to the codebase.
-
-5. **Commit Your Changes**:
-   - Commit your changes with a meaningful commit message:
-     ```bash
-     git add .
-     git commit -m "Description of your changes"
-     ```
-
-6. **Push to Your Fork**:
-   - Push your changes to your forked repository:
-     ```bash
-     git push origin feature-or-bugfix-name
-     ```
-
-7. **Create a Pull Request**:
-   - Open a pull request from your forked repository to the original repository.
-
-Please make sure to follow the [Code of Conduct](CODE_OF_CONDUCT.md) and ensure that your code adheres to our coding standards. If you have any questions, feel free to reach out.
-
-Thank you for contributing to Toota!
+This project is licensed under the MIT License - see the LICENSE file for details.
 

@@ -5,6 +5,8 @@ from authentication.models import Driver, User
 from django.utils import timezone
 from django.conf import settings
 from datetime import datetime
+from django.utils.crypto import get_random_string
+
 VEHICLE_TYPES = (
         ('bakkie', 'bakkie'),
         ('truck_1', '1 ton Truck'),
