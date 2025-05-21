@@ -3,6 +3,7 @@ import { BsPersonCircle } from "react-icons/bs";
 import { MdOutlineWorkHistory } from "react-icons/md";
 import { LuLogOut } from "react-icons/lu";
 import { FaRegCalendarAlt, FaUsers, FaCar, FaMoneyBillWave, FaRoute, FaChartBar } from "react-icons/fa";
+import { IoAnalyticsSharp } from "react-icons/io5";
 
 export const DASHBOARD_SIDEBAR_LINKS = [
 		{
@@ -23,7 +24,7 @@ export const DASHBOARD_SIDEBAR_LINKS = [
 			label: 'Profile',
 			path: 'profile',
 			icon: <BsPersonCircle />
-		},
+		}
 ]
 
 export const DASHBOARD_BOTTOM_LINKS = [
@@ -46,6 +47,12 @@ export const DASHBOARD_DRIVER_LINKS = [
 			icon: <HiOutlineHome />
 		},
 		{
+			key: 'Active Trips',
+			label: 'Active Trips',
+			path: 'active-trips',
+			icon: <FaRoute />
+		},
+		{
 			key: 'Trip History',
 			label: 'History',
 			path: 'trip-history',
@@ -62,7 +69,7 @@ export const DASHBOARD_DRIVER_LINKS = [
 			label: 'Profile',
 			path: 'profile',
 			icon: <BsPersonCircle />
-		},
+		}
 ]
 
 export const DASHBOARD_DRIVER_BOTTOM_LINKS = [
@@ -110,7 +117,7 @@ export const ADMIN_DASHBOARD_LINKS = [
 		key: 'Analytics',
 		label: 'Analytics',
 		path: 'analytics',
-		icon: <FaChartBar />
+		icon: <IoAnalyticsSharp />
 	},
 	{
 		key: 'Profile',
