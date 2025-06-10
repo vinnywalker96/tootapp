@@ -1,23 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { BellIcon, UserIcon, CogIcon, ClockIcon, CurrencyDollarIcon, ClipboardCheckIcon, QuestionMarkCircleIcon, HomeIcon, LogoutIcon } from '@heroicons/react/outline'; // Import required icons
+import { BellIcon, UserIcon, CogIcon, ClockIcon, CurrencyDollarIcon, ClipboardCheckIcon, QuestionMarkCircleIcon, HomeIcon, LogoutIcon } from '@heroicons/react/outline';
 import { useNavigate } from 'react-router-dom';
-import LogoutConfirmationForm from './LogoutConfirmationForm'; // Import the LogoutConfirmationForm component
+import LogoutConfirmationForm from './LogoutConfirmationForm';
 import DriverProfileForm from "./DriverProfile";
+import ActiveTrips from './ActiveTrips';
 import { ToastContainer, toast } from 'react-toastify';
 import supabase from '../../services/SupaBaseClient';
 import { jwtDecode } from "jwt-decode";
 import { getDriver, getAccessToken } from "../../services/AuthService";
+import webSocketService from '../../services/WebSocketService';
 
 const DriverDashboard = () => {
   const navigate = useNavigate();
   const [showLogoutConfirmation, setShowLogoutConfirmation] = useState(false);
-  const [editingProfile, setEditingProfile] = useState(false); // State variable to track profile editing mode
+  const [editingProfile, setEditingProfile] = useState(false);
   const [verified, setVerified] = useState(false);
   const [isSessionExpired, setIsSessionExpired] = useState(false);
+  const [activeSection, setActiveSection] = useState('active-trips');
+  const [newTripNotification, setNewTripNotification] = useState(false);
 
   const token = getAccessToken();
-  const decodedToken = jwtDecode(token);
+  const decodedToken = token ? jwtDecode(token) : null;
 
   useEffect(() => {
     const fetchVerificationStatus = async () => {
@@ -26,17 +30,13 @@ const DriverDashboard = () => {
           const driver = await getDriver();
           const config = { headers: { Authorization: `Bearer ${token}` } };
           try {
-
             const response = await axios.get(`${import.meta.env.VITE_BASE_URL}/api/driver/verification-check/${driver.id}/`, config);
-             if (response.data.verified === false){
+            if (response.data.verified === false) {
               navigate('/driver-verification-documents');
-             }
-
-          } catch(err){
-            console.error(err)
+            }
+          } catch(err) {
+            console.error(err);
           }
-
-          
         }
       } catch (error) {
         console.error('Error fetching verification status:', error);
@@ -44,99 +44,197 @@ const DriverDashboard = () => {
     };
 
     fetchVerificationStatus();
-  }, [token]);
+  }, [token, navigate]);
 
   useEffect(() => {
     if (token) {
-      
       try {
-        
         const currentTime = Date.now() / 1000;
 
         if (decodedToken.exp < currentTime) {
           setIsSessionExpired(true);
-          localStorage.removeItem('access_token'); // Clear expired token
-          navigate('/login/driver'); // Redirect to login on expiration
+          localStorage.removeItem('access_token');
+          navigate('/login/driver');
         } else {
           setIsSessionExpired(false);
         }
       } catch (error) {
         console.error('Error decoding token:', error);
-        setIsSessionExpired(true); // Handle decoding errors as expired
+        setIsSessionExpired(true);
       }
     } else {
-      setIsSessionExpired(true); // No token found, assume expired
+      setIsSessionExpired(true);
     }
-    
-  
-  }, [ token]);
+  }, [token, decodedToken, navigate]);
 
+  // Connect to WebSocket for real-time notifications
+  useEffect(() => {
+    // Connect to WebSocket
+    webSocketService.connect()
+      .then(() => {
+        console.log('WebSocket connected for driver dashboard');
+      })
+      .catch(error => {
+        console.error('WebSocket connection error:', error);
+      });
 
- 
+    // Subscribe to new trip notifications
+    const tripCreatedUnsubscribe = webSocketService.subscribe('trip.created', (data) => {
+      if (data.status === 'REQUESTED' && data.allow_bidding) {
+        setNewTripNotification(true);
+        // Show toast notification
+        toast.info('New trip available! Check the Active Trips section.', {
+          position: "top-right",
+          autoClose: 5000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+        });
+      }
+    });
+
+    return () => {
+      tripCreatedUnsubscribe();
+    };
+  }, []);
 
   // Function to toggle profile editing mode
   const toggleEditingProfile = () => {
     setEditingProfile(prevEditingProfile => !prevEditingProfile);
+    if (editingProfile) {
+      setActiveSection('active-trips');
+    }
+  };
+
+  // Handle section change
+  const handleSectionChange = (section) => {
+    setActiveSection(section);
+    if (section === 'active-trips') {
+      setNewTripNotification(false);
+    }
+    setEditingProfile(false);
+  };
+
+  // Render the appropriate section content
+  const renderSectionContent = () => {
+    switch (activeSection) {
+      case 'active-trips':
+        return <ActiveTrips />;
+      case 'profile':
+        return <DriverProfileForm onCancel={toggleEditingProfile} />;
+      case 'earnings':
+        return (
+          <div className="bg-white p-6 rounded-lg shadow-md">
+            <h2 className="text-xl font-semibold mb-4">Earnings and Statistics</h2>
+            <p className="text-gray-600">Your earnings information will be displayed here.</p>
+          </div>
+        );
+      case 'history':
+        return (
+          <div className="bg-white p-6 rounded-lg shadow-md">
+            <h2 className="text-xl font-semibold mb-4">Ride History</h2>
+            <p className="text-gray-600">Your ride history will be displayed here.</p>
+          </div>
+        );
+      case 'settings':
+        return (
+          <div className="bg-white p-6 rounded-lg shadow-md">
+            <h2 className="text-xl font-semibold mb-4">Settings and Support</h2>
+            <p className="text-gray-600">Settings and support options will be displayed here.</p>
+          </div>
+        );
+      default:
+        return <ActiveTrips />;
+    }
   };
 
   return (
     <div className="min-h-screen bg-gray-100">
-      {/* Header */}
-     
-      {/* Main Content */}
-      <main className="container mx-auto px-8 py-6">
+      <main className="container mx-auto px-4 py-6">
         {/* Dashboard Navigation */}
+        <div className="bg-white rounded-lg shadow-md p-4 mb-6">
+          <div className="flex flex-wrap justify-between items-center">
+            <h1 className="text-2xl font-bold text-gray-800 mb-4 md:mb-0">Driver Dashboard</h1>
+            
+            <div className="flex space-x-6">
+              <NavItem 
+                icon={<HomeIcon className="h-6 w-6" />} 
+                text="Active Trips" 
+                isActive={activeSection === 'active-trips'}
+                notification={newTripNotification}
+                handleClick={() => handleSectionChange('active-trips')} 
+              />
+              <NavItem 
+                icon={<UserIcon className="h-6 w-6" />} 
+                text="Profile" 
+                isActive={activeSection === 'profile'}
+                handleClick={() => handleSectionChange('profile')} 
+              />
+              <NavItem 
+                icon={<CurrencyDollarIcon className="h-6 w-6" />} 
+                text="Earnings" 
+                isActive={activeSection === 'earnings'}
+                handleClick={() => handleSectionChange('earnings')} 
+              />
+              <NavItem 
+                icon={<ClockIcon className="h-6 w-6" />} 
+                text="History" 
+                isActive={activeSection === 'history'}
+                handleClick={() => handleSectionChange('history')} 
+              />
+              <NavItem 
+                icon={<CogIcon className="h-6 w-6" />} 
+                text="Settings" 
+                isActive={activeSection === 'settings'}
+                handleClick={() => handleSectionChange('settings')} 
+              />
+            </div>
+          </div>
+        </div>
 
-        {/* Sections */}
-        {editingProfile ? ( // Conditionally render profile form if editingProfile is true
-          <DriverProfileForm onCancel={toggleEditingProfile} /> // Pass onCancel prop to handle canceling profile editing
-        ) : (
-          <section className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {/* Render other sections here */}
-            <DashboardSection icon={<ClockIcon className="h-8 w-8" />} title="Ongoing Rides" />
-            <DashboardSection icon={<CurrencyDollarIcon className="h-8 w-8" />} title="Earnings and Statistics" />
-            <DashboardSection icon={<ClipboardCheckIcon className="h-8 w-8" />} title="Ride History" />
-            <DashboardSection icon={<CogIcon className="h-8 w-8" />} title="Settings and Support" />
-          </section>
-        )}
+        {/* Main Content */}
+        {renderSectionContent()}
       </main>
 
       {/* Render LogoutConfirmationForm if showLogoutConfirmation is true */}
       {showLogoutConfirmation && (
-        <LogoutConfirmationForm onConfirm={handleLogoutConfirmation} />
+        <LogoutConfirmationForm onConfirm={() => {}} />
       )}
+      
       <ToastContainer 
-        autoClose={10000}
+        position="top-right"
+        autoClose={5000}
         hideProgressBar={false}
-        newestOnTop={false}
+        newestOnTop
         closeOnClick
         rtl={false}
         pauseOnFocusLoss
         draggable
         pauseOnHover
-        theme="light"
-        transition: Bounce
       />
     </div>
   );
 };
 
 // Component for navigation items
-const NavItem = ({ icon, text, handleClick }) => { // Added handleClick prop
+const NavItem = ({ icon, text, isActive, notification, handleClick }) => {
   return (
-    <div className="flex items-center space-x-2 text-gray-600 hover:text-gray-800 cursor-pointer" onClick={handleClick}> {/* Added onClick event handler */}
-      {icon}
+    <div 
+      className={`flex items-center space-x-2 cursor-pointer p-2 rounded-md ${
+        isActive 
+          ? 'bg-blue-50 text-blue-600' 
+          : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
+      }`} 
+      onClick={handleClick}
+    >
+      <div className="relative">
+        {icon}
+        {notification && (
+          <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full"></span>
+        )}
+      </div>
       <span className="hidden md:inline">{text}</span>
-    </div>
-  );
-};
-
-// Component for dashboard sections
-const DashboardSection = ({ icon, title }) => {
-  return (
-    <div className="bg-white p-6 rounded-lg shadow-md flex items-center space-x-4">
-      {icon}
-      <h2 className="text-lg font-semibold text-gray-800">{title}</h2>
     </div>
   );
 };

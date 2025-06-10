@@ -1,66 +1,78 @@
-import React, { useEffect, useState } from 'react';
-import { IoBagHandle, IoPieChart, IoPeople, IoCart } from 'react-icons/io5'
-import { FaUsers } from "react-icons/fa6";
-import { IoCarSportSharp } from "react-icons/io5";
-import { TbTruckDelivery } from "react-icons/tb";
-import { CiDeliveryTruck } from "react-icons/ci";
+import React from 'react';
+import { FaUsers, FaCarAlt, FaSpinner, FaCheckCircle, FaCalendarCheck } from 'react-icons/fa';
+import { MdPendingActions } from 'react-icons/md';
 
-
-function DashboardStatsGrid({ userCount, driverCount, tripInProgressCount, tripCompletedCount }) {
+function DashboardStatsGrid({ userCount, driverCount, tripInProgressCount, tripCompletedCount, requestedCount, acceptedCount }) {
+  const stats = [
+    {
+      title: 'Registered Users',
+      value: userCount || 0,
+      icon: <FaUsers className="text-2xl text-white" />,
+      bgColor: 'bg-blue-500',
+      textColor: 'text-blue-500',
+    },
+    {
+      title: 'Registered Drivers',
+      value: driverCount || 0,
+      icon: <FaCarAlt className="text-2xl text-white" />,
+      bgColor: 'bg-yellow-500',
+      textColor: 'text-yellow-500',
+    },
+    {
+      title: 'Trips In Progress',
+      value: tripInProgressCount || 0,
+      icon: <FaSpinner className="text-2xl text-white" />,
+      bgColor: 'bg-green-500',
+      textColor: 'text-green-500',
+    },
+    {
+      title: 'Trips Completed',
+      value: tripCompletedCount || 0,
+      icon: <FaCheckCircle className="text-2xl text-white" />,
+      bgColor: 'bg-purple-500',
+      textColor: 'text-purple-500',
+    },
+    {
+      title: 'Trips Requested',
+      value: requestedCount || 0,
+      icon: <MdPendingActions className="text-2xl text-white" />,
+      bgColor: 'bg-orange-500',
+      textColor: 'text-orange-500',
+    },
+    {
+      title: 'Trips Accepted',
+      value: acceptedCount || 0,
+      icon: <FaCalendarCheck className="text-2xl text-white" />,
+      bgColor: 'bg-indigo-500',
+      textColor: 'text-indigo-500',
+    }
+  ];
 
   return (
-    <div className="flex flex-col md:flex-row flex-wrap gap-4 w-full mb-5">
-      <BoxWrapper>
-        <div className="flex justify-center items-center w-12 h-12 bg-gray-500 rounded-full">
-          <FaUsers className="text-2xl text-white" />
-        </div>
-        <div className="pl-4">
-          <span className="text-sm font-light text-gray-500">Registered Users</span>
-          <div>
-            <strong className="text-xl font-semibold text-gray-500">{userCount}</strong>
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 w-full">
+      {stats.map((stat, index) => (
+        <BoxWrapper key={index} bgColor={stat.bgColor} textColor={stat.textColor}>
+          <div className={`flex justify-center items-center w-12 h-12 ${stat.bgColor} rounded-full`}>
+            {stat.icon}
           </div>
-        </div>
-      </BoxWrapper>
-      {/* Include other BoxWrapper components here */}
-      <BoxWrapper>
-        <div className='flex justify-center items-center w-12 h-12 bg-yellow-500 rounded-full'>
-          <IoCarSportSharp className='text-2xl text-white' />
-        </div>
-        <div className='pl-4'>
-          <span className='text-sm font-light text-gray-500'>Registered Drivers</span>
-          <div>
-            <strong className="text-xl font-semibold text-gray-500">{driverCount}</strong>
+          <div className="pl-4">
+            <span className="text-sm font-light text-gray-500">{stat.title}</span>
+            <div>
+              <strong className={`text-xl font-semibold ${stat.textColor}`}>{stat.value}</strong>
+            </div>
           </div>
-        </div>
-      </BoxWrapper>
-      <BoxWrapper>
-        <div className='flex justify-center items-center w-12 h-12 bg-green-500 rounded-full'>
-          <TbTruckDelivery className='text-2xl text-white' />
-        </div>
-        <div className='pl-4'>
-          <span className='text-sm font-light text-gray-500'>Trips In Progress</span>
-          <div>
-            <strong className="text-xl font-semibold text-gray-500">{tripInProgressCount}</strong>
-          </div>
-        </div>
-      </BoxWrapper>
-      <BoxWrapper>
-        <div className='flex justify-center items-center w-12 h-12 bg-blue-500 rounded-full'>
-          <CiDeliveryTruck className='text-2xl text-white' />
-        </div>
-        <div className='pl-4'>
-          <span className='text-sm font-light text-gray-500'>Trips Completed</span>
-          <div>
-            <strong className="text-xl font-semibold text-gray-500">{tripCompletedCount}</strong>
-          </div>
-        </div>
-      </BoxWrapper>
+        </BoxWrapper>
+      ))}
     </div>
   );
 }
 
 export default DashboardStatsGrid;
 
-function BoxWrapper({ children }) {
-  return <div className="flex flex-1 md:w-1/2 lg:w-1/4 items-center p-4 bg-white rounded-sm border border-gray-200">{children}</div>;
+function BoxWrapper({ children, bgColor, textColor }) {
+  return (
+    <div className="flex items-center p-4 bg-white rounded-lg shadow-md border border-gray-200 transition-all duration-300 hover:shadow-lg">
+      {children}
+    </div>
+  );
 }

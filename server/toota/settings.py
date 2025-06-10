@@ -133,13 +133,13 @@ AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
-REDIS_URL = os.getenv('REDIS_URL', 'rediss://red-cn9ilmdjm4es73c5biig:XNalq7X5mJVpdVewgf4anUJ9Dr8EDji3@oregon-redis.render.com:6379')
+REDIS_URL = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
 
 CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
-            "hosts": [("127.0.0.1", 6379)],
+            "hosts": [REDIS_URL],
         },
     },
 }

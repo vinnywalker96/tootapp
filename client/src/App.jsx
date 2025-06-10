@@ -39,8 +39,10 @@ import AdminLogin from './components/Admin/AdminLogin';
 import AdminSignup from './components/Admin/AdminSignup';
 import UserCalendar from './components/User/UserCalendar';
 import DriverCalender from './components/Driver/DriverCalender';
-import DriverDetails from './components/Driver/DriverCalender';
-
+import DriverDetails from './components/Admin/DriverDetails';
+import Analytics from './components/Admin/Analytics';
+import TripDetails from './components/Admin/TripDetails';
+import ActiveTrips from './components/Driver/ActiveTrips';
 
 function App() {
 
@@ -73,7 +75,10 @@ function App() {
             <Route path='users' element= {<Users />} />
             <Route path='drivers' element={<Drivers />} />
             <Route path='driver/:id' element={<DriverDetails />} />
+            <Route path='trips' element={<Trips />} />
+            <Route path='trip/:id' element={<TripDetails />} />
             <Route path='payments' element={<Payments />} />
+            <Route path='analytics' element={<Analytics />} />
             <Route path='logout' element={<AdminLogout />} />
           </Route>
 
@@ -82,6 +87,7 @@ function App() {
             <Route path='profile' element={<DriverProfile />} />
             <Route path='calendar' element={<DriverCalender />} />
             <Route path='trip-history' element= {<History />} />
+            <Route path='active-trips' element= {<ActiveTrips />} />
             <Route path='logout' element={<DriverLogout />} />
           </Route>
 

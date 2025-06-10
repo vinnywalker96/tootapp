@@ -1,18 +1,13 @@
-from rest_framework import serializers
 from django.utils import timezone
-from .models import Trip, Payment, PickupLocation, DropoffLocation
+from .models import Trip, Payment, PickupLocation, DropoffLocation, Bid, ChatMessage
 from authentication.serializers import UserSerializer, DriverSerializer
 from authentication.utils.notification_service import NotificationService
 import logging
 import re
 
-logger = logging.getLogger(__name__)
+from rest_framework import serializers
 
-class PhoneNumberValidatorMixin:
-    def validate_phone(self, phone_number):
-        if phone_number is None or len(phone_number) != 10 or not phone_number.startswith('0'):
-            logger.warning("Invalid phone number format.")
-            raise serializers.ValidationError("Phone number must start with '0' and be exactly 10 digits long.")
+logger = logging.getLogger(__name__)
 
 class PickupLocationSerializer(serializers.ModelSerializer):
     class Meta:
@@ -24,51 +19,103 @@ class DropoffLocationSerializer(serializers.ModelSerializer):
         model = DropoffLocation
         fields = '__all__'
 
-class TripSerializer(serializers.ModelSerializer, PhoneNumberValidatorMixin):
+class BidSerializer(serializers.ModelSerializer):
+    driver_details = serializers.SerializerMethodField(read_only=True)
+    
+    class Meta:
+        model = Bid
+        fields = ['id', 'trip', 'driver', 'amount', 'created', 'updated', 'is_accepted', 'driver_details']
+        read_only_fields = ['id', 'created', 'updated', 'is_accepted']
+    
+    def get_driver_details(self, obj):
+        return {
+            'id': obj.driver.id,
+            'full_name': obj.driver.full_name,
+            'phone_number': obj.driver.phone_number,
+            'rating': obj.driver.rating
+        }
+        
+    def validate_amount(self, value):
+        trip = self.context.get('trip')
+        if trip and trip.min_bid and value < trip.min_bid:
+            raise serializers.ValidationError(f"Bid amount must be at least {trip.min_bid}")
+        if trip and trip.max_bid and value > trip.max_bid:
+            raise serializers.ValidationError(f"Bid amount cannot exceed {trip.max_bid}")
+        return value
+
+class ChatMessageSerializer(serializers.ModelSerializer):
+    sender_name = serializers.SerializerMethodField(read_only=True)
+    
+    class Meta:
+        model = ChatMessage
+        fields = ['id', 'trip', 'sender_type', 'sender_id', 'message', 'created', 'is_read', 'sender_name']
+        read_only_fields = ['id', 'created', 'sender_name']
+    
+    def get_sender_name(self, obj):
+        from authentication.models import User, Driver
+        
+        if obj.sender_type == 'USER':
+            try:
+                user = User.objects.get(id=obj.sender_id)
+                return user.full_name
+            except User.DoesNotExist:
+                return "Unknown User"
+        else:
+            try:
+                driver = Driver.objects.get(id=obj.sender_id)
+                return driver.full_name
+            except Driver.DoesNotExist:
+                return "Unknown Driver"
+
+class TripSerializer(serializers.ModelSerializer):
     pickup_location = PickupLocationSerializer()
     dropoff_location = DropoffLocationSerializer()
-
+    driver = DriverSerializer(read_only=True)
+    user = UserSerializer(read_only=True)
+    bids = BidSerializer(many=True, read_only=True)
+    
     class Meta:
         model = Trip
         fields = '__all__'
-        read_only_fields = ('id', 'created', 'updated')
-
-    def validate(self, data):
-        # Validate the bid
-        if data.get('bid') is not None and data['bid'] < 50:
-            logger.warning("Bid amount too low.")
-            raise serializers.ValidationError({"bid": "Bid amount must be at least 50."})
-
-        # Validate the pickup time
-        if data.get('pickup_time') and data['pickup_time'] <= timezone.now():
-            logger.warning("Pickup time is in the past.")
-            raise serializers.ValidationError({"pickup_time": "Pickup time must be in the future."})
-
-        # Validate number of floors
-        if data.get('number_of_floors') is not None and data['number_of_floors'] < 0:
-            logger.warning("Number of floors cannot be negative.")
-            raise serializers.ValidationError({"number_of_floors": "Number of floors cannot be negative."})
-
-        return data
+        read_only_fields = ['id', 'created', 'updated']
+        
+    def validate_pickup_time(self, value):
+        if value < timezone.now():
+            raise serializers.ValidationError("Pickup time cannot be in the past.")
+        return value
+        
+    def validate_bid(self, value):
+        if value < 0:
+            raise serializers.ValidationError("Bid amount cannot be negative.")
+        return value
+        
+    def validate_min_bid(self, value):
+        if value < 0:
+            raise serializers.ValidationError("Minimum bid amount cannot be negative.")
+        return value
+        
+    def validate_max_bid(self, value):
+        min_bid = self.initial_data.get('min_bid')
+        if min_bid and float(value) < float(min_bid):
+            raise serializers.ValidationError("Maximum bid cannot be less than minimum bid.")
+        return value
+        
+    def validate_bidding_end_time(self, value):
+        if value and value < timezone.now():
+            raise serializers.ValidationError("Bidding end time cannot be in the past.")
+        return value
 
     def create(self, validated_data):
         try:
-            # Extract location data
             pickup_location_data = validated_data.pop('pickup_location')
             dropoff_location_data = validated_data.pop('dropoff_location')
-
-            # Validate phone numbers in both pickup and dropoff locations
-            self.validate_phone(pickup_location_data.get('phone_number'))
-            self.validate_phone(dropoff_location_data.get('phone_number'))
-
-            # Create the related location instances
+            
             pickup_location = PickupLocation.objects.create(**pickup_location_data)
             dropoff_location = DropoffLocation.objects.create(**dropoff_location_data)
-
-            # Create the Trip instance
+            
             trip = Trip.objects.create(
-                pickup_location=pickup_location, 
-                dropoff_location=dropoff_location, 
+                pickup_location=pickup_location,
+                dropoff_location=dropoff_location,
                 **validated_data
             )
 
@@ -91,85 +138,44 @@ class TripSerializer(serializers.ModelSerializer, PhoneNumberValidatorMixin):
 
     def update(self, instance, validated_data):
         try:
-            # Extract the location data
             pickup_location_data = validated_data.pop('pickup_location', None)
             dropoff_location_data = validated_data.pop('dropoff_location', None)
-
-            # Update PickupLocation fields if data is provided
+            
             if pickup_location_data:
-                # Validate phone number
-                self.validate_phone(pickup_location_data.get('phone_number'))
                 pickup_location = instance.pickup_location
-                pickup_location.location = pickup_location_data.get('location', pickup_location.location)
-                pickup_location.phone_number = pickup_location_data.get('phone_number', pickup_location.phone_number)
+                for key, value in pickup_location_data.items():
+                    setattr(pickup_location, key, value)
                 pickup_location.save()
-
-            # Update DropoffLocation fields if data is provided
+                
             if dropoff_location_data:
-                # Validate phone number
-                self.validate_phone(dropoff_location_data.get('phone_number'))
                 dropoff_location = instance.dropoff_location
-                dropoff_location.location = dropoff_location_data.get('location', dropoff_location.location)
-                dropoff_location.phone_number = dropoff_location_data.get('phone_number', dropoff_location.phone_number)
+                for key, value in dropoff_location_data.items():
+                    setattr(dropoff_location, key, value)
                 dropoff_location.save()
-
-            # Update trip fields
-            for attr, value in validated_data.items():
-                setattr(instance, attr, value)
+                
+            for key, value in validated_data.items():
+                setattr(instance, key, value)
+                
             instance.save()
-
-            # Update driver's acceptance rate if status is updated to 'ACCEPTED'
-            if instance.status == 'ACCEPTED' and instance.driver:
-                instance.driver.update_acceptance_rate()
-
-            logger.info(f"Trip updated successfully with ID: {instance.id}")
             return instance
         except Exception as e:
             logger.error(f"Error while updating trip: {str(e)}")
             raise serializers.ValidationError({"detail": "Error occurred during trip update."})
 
+class NestedTripSerializer(TripSerializer):
+    """Serializer for nested trip representation with additional details"""
+    pickup_location = PickupLocationSerializer()
+    dropoff_location = DropoffLocationSerializer()
+    driver = DriverSerializer()
+    user = UserSerializer()
+    bids = BidSerializer(many=True)
+    
+    class Meta(TripSerializer.Meta):
+        depth = 1
+
 class PaymentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Payment
-        fields = [
-            'id', 'trip', 'driver', 'amount_paid', 
-            'compensation_amount', 'net_amount', 
-            'payment_status', 'payment_date', 'order_number'
-        ]
-        read_only_fields = ('id', 'payment_date', 'order_number')
+        fields = '__all__'
+        read_only_fields = ['id', 'payment_date', 'order_number', 'compensation_amount', 'net_amount']
 
-    def create(self, validated_data):
-        try:
-            # Create and save Payment instance with calculated values
-            payment = Payment(
-                trip=validated_data.get('trip'),
-                driver=validated_data.get('driver'),
-                amount_paid=validated_data.get('amount_paid'),
-                payment_status=validated_data.get('payment_status', Payment.PENDING)
-            )
-
-            payment.save()
-            logger.info(f"Payment created successfully for trip: {payment.trip.id}")
-            return payment
-        except Exception as e:
-            logger.error(f"Error while creating payment: {str(e)}")
-            raise serializers.ValidationError({"detail": "Error occurred during payment creation."})
-
-    def update(self, instance, validated_data):
-        try:
-            # Update Payment instance with validated data
-            instance.trip = validated_data.get('trip', instance.trip)
-            instance.driver = validated_data.get('driver', instance.driver)
-            instance.amount_paid = validated_data.get('amount_paid', instance.amount_paid)
-            instance.payment_status = validated_data.get('payment_status', instance.payment_status)
-
-            # Calculate new compensation and net amounts
-            instance.compensation_amount = instance.amount_paid * 0.20
-            instance.net_amount = instance.amount_paid - instance.compensation_amount
-
-            instance.save()
-            logger.info(f"Payment updated successfully for trip: {instance.trip.id}")
-            return instance
-        except Exception as e:
-            logger.error(f"Error while updating payment: {str(e)}")
-            raise serializers.ValidationError({"detail": "Error occurred during payment update."})
